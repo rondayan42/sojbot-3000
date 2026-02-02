@@ -12,7 +12,9 @@ class LinkView(discord.ui.View):
         self.original_interaction = original_interaction
         
         # Add Steam URL Button
-        self.add_item(discord.ui.Button(label="Add me on Steam", url=f"steam://friends/add/{bot_steam_id}"))
+        # Discord doesn't support steam:// in buttons, so we link to the profile.
+        # Ideally we'd use a redirect service, but profile is safe.
+        self.add_item(discord.ui.Button(label="Add me on Steam", url=f"https://steamcommunity.com/profiles/{bot_steam_id}"))
 
     async def update_with_confirmation(self, steam_id, steam_name):
         # Update the view to ask for confirmation
@@ -77,7 +79,12 @@ class DiscordBot:
                 bot_steam_id = self.steam_service.client.user.steam_id
                 view = LinkView(bot_steam_id, self, interaction)
                 self.pending_links.append(view)
-                await interaction.response.send_message("I need to see your game first. Click below to auto-add me on Steam.", view=view, ephemeral=True)
+                
+                # We put the steam:// link in text because Discord buttons don't allow it.
+                # On Desktop, this link is clickable and triggers the steam client directly.
+                msg = f"I need to see your game first.\n\n**Auto-Link:** steam://friends/add/{bot_steam_id}\n*(Click the link above to instantly add me)*"
+                
+                await interaction.response.send_message(msg, view=view, ephemeral=True)
             else:
                 await interaction.response.defer()
                 

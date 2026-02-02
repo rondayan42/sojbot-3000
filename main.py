@@ -1,6 +1,15 @@
+from gevent import monkey
+monkey.patch_all()
+
 import asyncio
 import logging
 import os
+import sys
+
+# Gevent compatible loop policy for Windows
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from dotenv import load_dotenv
 from steam_service import SteamService
 from discord_service import DiscordBot

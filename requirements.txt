@@ -1,5 +1,10 @@
 discord.py
-steam
+steam[client]
 Pillow
 google-genai
 python-dotenv
+gevent-eventemitter
+protobuf
+pycryptodome
+gevent>=23.9.1
+grpcio

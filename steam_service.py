@@ -29,6 +29,7 @@ class SteamService:
     def on_logged_on(self):
         self.connected = True
         logger.info(f"Logged into Steam as {self.client.user.name}")
+        self.client.change_status(persona_state=1) # EPersonaState.Online
         self.client.games_played([1158310]) 
 
     def on_disconnected(self):
@@ -87,12 +88,28 @@ class SteamService:
                 time.sleep(10)
 
     async def run(self):
+        # Validate credentials before starting
+        if not self.username or "your_steam_username" in self.username:
+            logger.error("Invalid Steam credentials in .env! Please update them.")
+            return
+
         self.loop = asyncio.get_running_loop()
         logger.info("Starting Steam Client Thread...")
         
-        # thread = threading.Thread(target=self._run_client)
-        # thread.start()
-        # await asyncio.Event().wait() # Block forever since thread runs in bg
+        # Use a daemon thread to avoid blocking shutdown
+        self.thread = threading.Thread(target=self._run_client, daemon=True)
+        self.thread.start()
         
-        # Better: run in executor to keep it cleaner
-        await self.loop.run_in_executor(None, self._run_client)
+        # We don't await the thread, it runs in background.
+        # But we need to keep this coroutine alive if it's gathered?
+        # Actually asyncio.gather waits for all coros. 
+        # If we return, gather finishes?
+        # We should await an event or sleep forever to keep the service 'running' from main's perspective
+        # until logical shutdown.
+        
+        stop_event = asyncio.Event()
+        try:
+            await stop_event.wait()
+        except asyncio.CancelledError:
+            logger.info("Steam Service stopping...")
+            self.client.logout()
