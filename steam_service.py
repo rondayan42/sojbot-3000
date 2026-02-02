@@ -1,0 +1,98 @@
+import asyncio
+import logging
+import threading
+import time
+from steam.client import SteamClient
+from steam.enums import EResult
+
+logger = logging.getLogger("SteamService")
+
+class SteamService:
+    def __init__(self, username, password, shared_secret=None):
+        self.username = username
+        self.password = password
+        self.shared_secret = shared_secret
+        self.client = SteamClient()
+        self.connected = False
+        self.new_friend_callback = None
+        self.loop = None
+        
+        # Setup callbacks
+        self.client.on("logged_on", self.on_logged_on)
+        self.client.on("disconnected", self.on_disconnected)
+        self.client.on("error", self.on_error)
+        self.client.on("friend_invite", self.on_friend_invite)
+
+    def set_new_friend_callback(self, callback):
+        self.new_friend_callback = callback
+
+    def on_logged_on(self):
+        self.connected = True
+        logger.info(f"Logged into Steam as {self.client.user.name}")
+        self.client.games_played([1158310]) 
+
+    def on_disconnected(self):
+        self.connected = False
+        logger.warning("Disconnected from Steam.")
+
+    def on_error(self, result):
+        logger.error(f"Steam Error: {result}")
+
+    def on_friend_invite(self, user):
+        logger.info(f"Received friend invite from {user.name} ({user.steam_id})")
+        user.accept()
+        logger.info(f"Accepted friend invite from {user.name}")
+        
+        if self.new_friend_callback and self.loop:
+            asyncio.run_coroutine_threadsafe(
+                self.new_friend_callback(user.steam_id, user.name), 
+                self.loop
+            )
+
+    def get_rich_presence(self, steam_id):
+        if not self.connected:
+            return None
+        user = self.client.get_user(steam_id)
+        if user:
+            # rich_presence is a dict on the SteamUser object in some versions, 
+            # or retrieved via method. Checking typical steam.py usage:
+            # It's often in user.rich_presence if available.
+            return getattr(user, 'rich_presence', {})
+        return None
+
+    def _run_client(self):
+        logger.info("Keep-alive loop for Steam Client started.")
+        while True:
+            try:
+                if self.shared_secret:
+                    # TODO: Generate 2FA code if secret provided
+                    pass
+                
+                logger.info("Attempting to login to Steam...")
+                result = self.client.login(self.username, self.password)
+                
+                if result != EResult.OK:
+                    logger.error(f"Failed to login to Steam: {result}. Retrying in 60s...")
+                    time.sleep(60)
+                    continue
+
+                logger.info("Steam Client Running...")
+                self.client.run_forever()
+                
+                logger.warning("Steam Client disconnected. Retrying in 10s...")
+                time.sleep(10)
+                
+            except Exception as e:
+                logger.error(f"Steam Client Crash: {e}. Restarting in 10s...")
+                time.sleep(10)
+
+    async def run(self):
+        self.loop = asyncio.get_running_loop()
+        logger.info("Starting Steam Client Thread...")
+        
+        # thread = threading.Thread(target=self._run_client)
+        # thread.start()
+        # await asyncio.Event().wait() # Block forever since thread runs in bg
+        
+        # Better: run in executor to keep it cleaner
+        await self.loop.run_in_executor(None, self._run_client)
