@@ -47,7 +47,7 @@ class Artist:
             self.bg_layer = self._create_placeholder_bg()
         
     def _create_placeholder_bg(self):
-        # Create a dark medieval/cyberpunk background
+        # Create a dark medieval background
         img = Image.new('RGB', (1000, 300), color=(25, 20, 30))
         d = ImageDraw.Draw(img)
         # Add some texture/noise lines
