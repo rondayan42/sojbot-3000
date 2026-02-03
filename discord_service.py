@@ -217,7 +217,7 @@ class DiscordBot:
 
                 row1 = f"{flavor} {name_only}"
                 row2 = rank
-                row3 = year
+                row3 = f"{year} A.D."
 
                 # Construct Prompt
                 # "Oil painting of Count Mordechai. He is the Count of Tmutarakan. Year 867. Context: Ruling."

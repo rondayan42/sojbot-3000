@@ -125,14 +125,14 @@ class Artist:
         row3_font = load_custom_font(num_font, 24) 
 
         # Coordinates for Text Centers
-        # Scroll 1 (Top): "Ruling as Mordechai..."
-        d.text((730, 75), text_data.get('row1', ''), font=row1_font, fill=(40, 30, 10), anchor="mm")
+        # Scroll 1 (Top): "Ruling as..." (Full width scroll)
+        d.text((710, 75), text_data.get('row1', ''), font=row1_font, fill=(40, 30, 10), anchor="mm")
         
-        # Scroll 2 (Middle): "Count"
-        d.text((735, 160), text_data.get('row2', ''), font=row2_font, fill=(0, 0, 0), anchor="mm")
+        # Scroll 2 (Middle): "Count" (Shifted right due to Crown icon)
+        d.text((745, 160), text_data.get('row2', ''), font=row2_font, fill=(0, 0, 0), anchor="mm")
         
-        # Scroll 3 (Bottom): "867"
-        d.text((735, 245), text_data.get('row3', ''), font=row3_font, fill=(60, 40, 20), anchor="mm")
+        # Scroll 3 (Bottom): "867" (Shifted right due to Hourglass icon)
+        d.text((745, 245), text_data.get('row3', ''), font=row3_font, fill=(60, 40, 20), anchor="mm")
 
         output = io.BytesIO()
         canvas.save(output, format='PNG')
