@@ -61,6 +61,30 @@ class SteamService:
             return getattr(user, 'rich_presence', {})
         return None
 
+    def add_friend(self, steam_id):
+        if not self.connected:
+            logger.warning("Cannot add friend: Not connected.")
+            return False
+        
+        try:
+            sid = int(steam_id)
+            
+            # Use generic MsgProto with the Enum
+            from steam.core.msg import MsgProto
+            from steam.enums.emsg import EMsg
+            
+            # Create the AddFriend message
+            message = MsgProto(EMsg.ClientAddFriend)
+            message.body.steamid_to_add = sid
+            
+            self.client.send(message)
+            
+            logger.info(f"Sent friend request to SteamID: {sid}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to add friend {steam_id}: {e}")
+            return False
+
     def _run_client(self):
         logger.info("Keep-alive loop for Steam Client started.")
         while True:
