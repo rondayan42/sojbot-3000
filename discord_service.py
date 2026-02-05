@@ -2,6 +2,8 @@ import discord
 from discord import app_commands
 import logging
 import asyncio
+import json
+import re
 
 logger = logging.getLogger("DiscordService")
 
@@ -178,41 +180,42 @@ class DiscordBot:
                 
                 char_full = rp.get('character', 'Unknown Ruler')
                 flavor = rp.get('flavor', '')
-                year = rp.get('Year') or rp.get('param_year') or 'Unknown Year'
+                year = rp.get('year') or rp.get('Year') or rp.get('param_year') or 'Unknown Year'
                 
-                # Attempt to split Rank from Name
-                # Common CK3 ranks (English + Hebrew)
-                # Sorted by length to ensure 'High Chieftain' matches before 'Chieftain', etc.
-                ranks = [
-                    "Melekh Ha'Melakhim", 'High Chieftain', 'Emperor', 'Basileus', 'Maharaja',
-                    'Melekh', 'Sultan', 'Sheikh', 'Despot', 'Chieftain', 
-                    'Count', 'Duke', 'King', 'Jarl', 'Shah', 'Doux', 'Emir', 'Raja', 
-                    'Nasi', 'Rozen', 'Gaon'
-                ]
-                # Ensure sort by length just in case
-                ranks.sort(key=len, reverse=True)
+                # AI-POWERED DYNAMIC EXTRACTION
+                # Why guess when we have intelligence?
+                parse_prompt = (
+                    f"Parse the following Crusader Kings 3 character string: '{char_full}'.\n"
+                    f"Extract the 'rank' (Title like King, Count, Basileus, Melekh), 'name' (just the name), and 'location' (Realm or 'of X').\n"
+                    f"Return ONLY a JSON object with keys: 'rank', 'name', 'location'.\n"
+                    f"Example: 'King Philippe of France' -> {{'rank': 'King', 'name': 'Philippe', 'location': 'France'}}\n"
+                    f"Example: 'Melekh Ha'Melakhim David' -> {{'rank': 'Melekh Ha'Melakhim', 'name': 'David', 'location': 'Unknown Realm'}}\n"
+                )
                 
-                rank = "Ruler"
-                name_only = char_full
-                
-                for r in ranks:
-                    if char_full.startswith(r + " "):
-                        rank = r
-                        name_only = char_full[len(r)+1:]
-                        break
-                
-                # User Request:
-                # Row 1: "Ruling as Mordechai of Tmutarakan" (Activity + Name)
-                # Row 2: "Count" (Rank)
-                # Row 3: "867" (Date)
-                
-                # Attempt to extract Location from Name (e.g. "Mordechai of Tmutarakan")
-                if " of " in name_only:
-                    parts = name_only.split(" of ", 1)
-                    actual_name = parts[0]
-                    location = parts[1]
-                else:
-                    actual_name = name_only
+                try:
+                    # Quick AI call
+                    parse_json_text = await self.artist.generate_text(parse_prompt)
+                    
+                    # Clean markdown code blocks if present
+                    parse_json_text = parse_json_text.replace('```json', '').replace('```', '').strip()
+                    
+                    parsed = json.loads(parse_json_text)
+                    
+                    rank = parsed.get('rank', 'Ruler')
+                    actual_name = parsed.get('name', char_full)
+                    location = parsed.get('location', 'Unknown Realm')
+                    
+                    # Reconstruct name_only for display (combining name + location)
+                    if location != 'Unknown Realm':
+                        name_only = f"{actual_name} of {location}"
+                    else:
+                        name_only = actual_name
+
+                except Exception as e:
+                    logger.error(f"AI Parse Error: {e}. Falling back to naive.")
+                    rank = "Ruler"
+                    actual_name = char_full
+                    name_only = char_full
                     location = "Unknown Realm"
 
                 row1 = f"{flavor} {name_only}"
@@ -228,7 +231,8 @@ class DiscordBot:
                     f"Activity/Context: {flavor}. "
                     f"Year: {year}. "
                     f"Note: Consider the cultural origin of the name '{actual_name}' (e.g. Jewish, Germanic, etc.) for the character's ethnic appearance and attire. "
-                    f"High contrast, rough brushstrokes, atmospheric lighting."
+                    f"High contrast, rough brushstrokes, atmospheric lighting. "
+                    f"IMPORTANT: No supernatural elements, magic, glowing eyes, or fantasy creatures. Strictly historical realism."
                 )
                 
                 await interaction.followup.send(f"Consulting the archives for **{name_only}**...")

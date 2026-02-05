@@ -79,6 +79,25 @@ class Artist:
         except Exception as e:
             logger.error(f"Image Gen Error: {e}")
             return None 
+    
+    async def generate_text(self, prompt):
+        """Generates text using a fast model for parsing/logic."""
+        # No rate limit check needed for text (higher quota usually)
+        try:
+            loop = asyncio.get_running_loop()
+            
+            def _generate():
+                return self.client.models.generate_content(
+                    model='gemini-2.0-flash', 
+                    contents=prompt
+                )
+
+            response = await loop.run_in_executor(None, _generate)
+            return response.text
+            
+        except Exception as e:
+            logger.error(f"Text Gen Error: {e}")
+            return None
 
     def composite(self, ai_image, text_data):
         # Background Size: 1020x300
@@ -117,8 +136,27 @@ class Artist:
         text_font = "MiddleAgesDeco_PERSONAL_USE.ttf"
         num_font = "TaylorGothic.otf"
 
-        # Top Scroll (Activity + Name)
-        row1_font = load_custom_font(text_font, 20)  
+        # Top Scroll (Activity + Name) - DYNAMIC SIZING
+        # Measure text width and scale down if too long
+        row1_text = text_data.get('row1', '')
+        max_width = 340  # Even tighter - strict flat area boundary
+        base_size = 24
+        min_size = 14
+        
+        # Start with base size and scale down if needed
+        row1_size = base_size
+        while row1_size >= min_size:
+            test_font = load_custom_font(text_font, row1_size)
+            # Get bounding box of text
+            bbox = d.textbbox((0, 0), row1_text, font=test_font)
+            text_width = bbox[2] - bbox[0]
+            
+            if text_width <= max_width:
+                break
+            row1_size -= 1
+        
+        row1_font = load_custom_font(text_font, row1_size)
+        
         # Middle Scroll (Rank)
         row2_font = load_custom_font(text_font, 30) 
         # Bottom Scroll (Date)
