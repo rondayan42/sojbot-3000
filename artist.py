@@ -139,9 +139,9 @@ class Artist:
         # Top Scroll (Activity + Name) - DYNAMIC SIZING
         # Measure text width and scale down if too long
         row1_text = text_data.get('row1', '')
-        max_width = 340  # Even tighter - strict flat area boundary
+        max_width = 360  # Even tighter - strict flat area boundary
         base_size = 24
-        min_size = 14
+        min_size = 10  # Lowered for extreme edge cases
         
         # Start with base size and scale down if needed
         row1_size = base_size
